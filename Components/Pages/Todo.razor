@@ -1,31 +1,96 @@
 ﻿@page "/todo"
 @rendermode InteractiveServer
 
-<h3>Todo (@todos.Count(todo => !todo.IsDone))</h3>
+<!--h3>Todo (@todos.Count(todo => !todo.IsDone))</!--h3-->
+<h3>Blogs</h3>
 
 <input @bind="newTodo" />
-<button @onclick="AddTodo">Add todo</button>
+<button @onclick="AddTodo">Create</button>
+<button @onclick="Leer">Read</button>
 
 @code {
-    private List<TodoItem> todos = new(0);
+    private List<Intro.Blog> blogs = new(0);
     string newTodo = "";
 
     void AddTodo()
     {
         if (!string.IsNullOrWhiteSpace(newTodo))
         {
-            todos.Add(new TodoItem { Title = newTodo });
+            using (var db = new Intro.BloggingContext())
+            {
+                var blog = new Intro.Blog { Url = newTodo };
+                db.Blogs.Add(blog);
+                db.SaveChanges();
+
+                Leer();
+            }
+
+            //blogs.Add(new Intro.Blog { Url = newTodo });
             newTodo = string.Empty;
+        }
+    }
+
+    void Leer()
+    {
+        using (var db = new Intro.BloggingContext())
+        {
+            blogs = db.Blogs
+                .OrderBy(b => b.Url)
+                .ToList();
+
+            foreach (var blog in blogs)
+            {
+                using (var db2 = new Intro.BloggingContext())
+                {
+                    blog.Posts = db.Posts
+                        .Where(p => p.BlogId == blog.BlogId)
+                        .ToList();
+                }
+            }
+        }
+    }
+
+    void Update(Intro.Blog mBlog)
+    {
+        Console.WriteLine($"update {mBlog.BlogId}");
+        using (var context = new Intro.BloggingContext())
+        {
+            var blog = context.Blogs.Single(b => b.BlogId == mBlog.BlogId);
+            blog.Url = mBlog.Url;
+            context.SaveChanges();
+        }
+    }
+
+    void Delete(Intro.Blog mBlog)
+    {
+        Console.WriteLine($"update {mBlog.BlogId}");
+        using (var context = new Intro.BloggingContext())
+        {
+            var blog = context.Blogs.Single(b => b.BlogId == mBlog.BlogId);
+            context.Blogs.Remove(blog);
+            context.SaveChanges();
+            Leer();
         }
     }
 }
 
 <ul>
-    @foreach (var todo in todos)
+    @foreach (var todo in blogs)
     {
         <li>
-            <input type="checkbox" @bind="todo.IsDone" />
-            <input @bind="todo.Title" />
+            <input type="hidden" @bind="todo.BlogId" />
+            <input @bind="todo.Url" />
+            <button @onclick="() => Update(todo)">Update</button>
+            <button @onclick="() => Delete(todo)">Delete</button>
+            <button onclick="document.querySelector('#detail-@todo.BlogId').style.display = !!document.querySelector('#detail-@todo.BlogId').style.display ? 'none' : ''">Detail</button>
+
+            <ul id="detail-@todo.BlogId">
+                @foreach(var post in todo.Posts)
+                {
+                    <input @bind="post.Title" />
+                    <input @bind="post.Content" />
+                }
+            </ul>
         </li>
     }
 </ul>

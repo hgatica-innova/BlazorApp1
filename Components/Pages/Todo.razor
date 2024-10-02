@@ -35,7 +35,7 @@
         using (var db = new Intro.BloggingContext())
         {
             blogs = db.Blogs
-                .OrderBy(b => b.Url)
+                .OrderBy(b => b.BlogId)
                 .ToList();
 
             foreach (var blog in blogs)
@@ -72,6 +72,46 @@
             Leer();
         }
     }
+
+    void UpdatePost(Intro.Post mPost)
+    {
+        using (var context = new Intro.BloggingContext())
+        {
+            var blog = context.Posts.Single(b => b.PostId == mPost.PostId);
+            blog.Title = mPost.Title;
+            blog.Content = mPost.Content;
+            context.SaveChanges();
+        }
+    }
+
+    void DeletePost(Intro.Post mPost)
+    {
+        using (var context = new Intro.BloggingContext())
+        {
+            var blog = context.Posts.Single(b => b.PostId == mPost.PostId);
+            context.Posts.Remove(blog);
+            context.SaveChanges();
+            Leer();
+        }
+    }
+
+    void AddDetail(Intro.Blog mBlog)
+    {
+        if (!string.IsNullOrWhiteSpace(mBlog.NewPostTitle) && !string.IsNullOrWhiteSpace(mBlog.NewPostContent))
+        {
+            using (var db = new Intro.BloggingContext())
+            {
+                var post = new Intro.Post { Title = mBlog.NewPostTitle, Content = mBlog.NewPostContent, BlogId = mBlog.BlogId };
+                db.Posts.Add(post);
+                db.SaveChanges();
+
+                Leer();
+            }
+
+            newTodo = string.Empty;
+        }
+    }
+
 }
 
 <ul>
@@ -82,13 +122,20 @@
             <input @bind="todo.Url" />
             <button @onclick="() => Update(todo)">Update</button>
             <button @onclick="() => Delete(todo)">Delete</button>
-            <button onclick="document.querySelector('#detail-@todo.BlogId').style.display = !!document.querySelector('#detail-@todo.BlogId').style.display ? 'none' : ''">Detail</button>
+
+            <input @bind="todo.NewPostTitle" />
+            <input @bind="todo.NewPostContent" />
+            <button @onclick="() => AddDetail(todo)">Add Detail</button>
 
             <ul id="detail-@todo.BlogId">
                 @foreach(var post in todo.Posts)
                 {
-                    <input @bind="post.Title" />
-                    <input @bind="post.Content" />
+                    <li>
+                        <input @bind="post.Title" />
+                        <input @bind="post.Content" />
+                        <button @onclick="() => UpdatePost(post)">Update</button>
+                        <button @onclick="() => DeletePost(post)">Delete</button>
+                    </li>
                 }
             </ul>
         </li>
